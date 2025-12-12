@@ -4,7 +4,7 @@ module subrs
   implicit none
 contains
   subroutine init_sphere(X)
-    real(real64), dimension(Np, 3), intent(inout) :: X
+    real(real64), dimension(3,Np), intent(inout) :: X
 
     integer :: i
     real(real64) :: dx, dy, dz, dr
@@ -26,33 +26,69 @@ contains
 
        ! might need a scaling to really put it uniformly
        ! plotting an histogram might be a good thing to do
-       X(i, 1) = R * dx
-       X(i, 2) = R * dy
-       X(i, 3) = R * dz
+       X(1,i) = R * dx
+       X(2,i) = R * dy
+       X(3,i) = R * dz
     end do
   end subroutine init_sphere
 
   subroutine init_rotation(X, V)
-    real(real64), dimension(Np, 3), intent(in) :: X
-    real(real64), dimension(Np, 3), intent(inout) :: V
+    real(real64), dimension(3, Np), intent(in) :: X
+    real(real64), dimension(3, Np), intent(inout) :: V
     integer :: i
 
     V = 0.0d0
     do i=1,Np
-       V(i,1) = -Omega * X(i,2) ! - Omega y
-       V(i,2) = Omega * X(i,1) ! Omega x
+       V(1,i) = -Omega * X(2,i) ! - Omega y
+       V(2,i) = Omega * X(1,i) ! Omega x
     end do
   end subroutine init_rotation
 
-  function compute_force(Xi, Xj) result(F)
+  function compute_epot(Xi, Xj) result(E)
     real(real64), intent(in) :: Xi(:), Xj(:)
-    real(real64), dimension(3) :: F
+    real(real64), dimension(3) :: dx
+    real(real64) :: E, rij
 
-    real(real64) :: d
-    real(real64), dimension(3) :: Xji
-    Xji = Xj - Xi
-    d  = sqrt(dot_product(Xji, Xji))
+    dx = Xj(:) - Xi(:)
+    rij = sqrt(dot_product(dx,dx) + epsilon*epsilon)
+    E = G*m*m/rij
+  end function compute_epot
+  
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  ! function compute_force(Xi, Xj) result(F)   !
+  !   real(real64), intent(in) :: Xi(:), Xj(:) !
+  !   real(real64), dimension(3) :: F          !
+  !                                            !
+  !   real(real64) :: d,rsqrt                  !
+  !   real(real64), dimension(3) :: Xji        !
+  !   Xji = Xj - Xi                            !
+  !   d  = sqrt(dot_product(Xji, Xji))         !
+  !   rsqrt = sqrt((d*d + epsilon*epsilon))    !
+  !                                            !
+  !   F = (G * m*m / rsqrt*rsqrt*rsqrt)) * Xji !
+  ! end function compute_force                 !
+  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-    F = (G * m*m / (d*d + epsilon*epsilon)**(3./2.)) * Xji
+
+  function compute_force(Xi, Xj) result(F)
+    real(real64), intent(in) :: Xi(3), Xj(3)
+    real(real64) :: F(3)
+
+    real(real64) :: dx, dy, dz
+    real(real64) :: r2, inv_r, inv_r3
+    real(real64), parameter :: one = 1.0
+    real(real64), parameter :: eps2 = epsilon*epsilon
+
+    dx = Xj(1) - Xi(1)
+    dy = Xj(2) - Xi(2)
+    dz = Xj(3) - Xi(3)
+
+    r2   = dx*dx + dy*dy + dz*dz + eps2
+    inv_r  = one / sqrt(r2)
+    inv_r3 = inv_r * inv_r * inv_r
+
+    F(1) = dx * (G * m * m * inv_r3)
+    F(2) = dy * (G * m * m * inv_r3)
+    F(3) = dz * (G * m * m * inv_r3)
   end function compute_force
 end module subrs

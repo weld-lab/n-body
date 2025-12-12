@@ -1,4 +1,5 @@
-FLAGS="-O3 -Wall -Wextra -Wpedantic -fcheck=all"
+export OMP_NUM_THREADS=8
+FLAGS="-O3 -march=native -funroll-loops -Wall -Wextra -Wpedantic -fcheck=all -fopenmp -Accelerate"
 
 echo "Compiling..."
 gfortran -c params.f90 $FLAGS
