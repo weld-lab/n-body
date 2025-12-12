@@ -13,7 +13,7 @@ program main
   real(real64), dimension(3, Np) :: X, V, A
   real(real64), dimension(3, Np) :: A_LOCAL
   real(real64), dimension(3) :: F
-  real(real64) :: Ekin, Epot
+  real(real64), dimension(Nt) :: Ekin, Epot
   integer :: fdX, fdE, stat, omp_get_num_threads
   character(len=512) :: msg
 
@@ -37,15 +37,19 @@ program main
   print *, "epsilon", epsilon
   print *, "Omega", Omega
   !$omp parallel
-  print *, "#Threads", omp_get_num_threads()
+  !$omp single
+  print *, "Threads", omp_get_num_threads()
+  !$omp end single
   !$omp end parallel
+
+  Ekin = 0.0
+  Epot = 0.0
 
   call init_sphere(X)
   write(fdX) X
   
 
   call init_rotation(X,V)
-  
 
 
   A = 0.0d0
@@ -57,13 +61,13 @@ program main
      end do
   end do init
     
-  do t=0, Nt
+  do t=1, Nt
      V = V + 0.5d0 * dt * A
      X = X + dt * V
 
      A = 0.0
      
-     !$omp parallel private(i,j,F, A_LOCAL)
+     !$omp parallel private(i,j,F, A_LOCAL) reduction(+:Epot)
      A_LOCAL = 0.0d0
      !$omp do schedule(static)
      do i=1, Np-1
@@ -71,6 +75,7 @@ program main
            F = compute_force(X(:,i), X(:,j))
            A_LOCAL(:,i) = A_LOCAL(:,i) + F/m
            A_LOCAL(:,j) = A_LOCAL(:,j) - F/m
+           Epot(t) = Epot(t) - compute_epot(X(:,i), X(:,j))
         end do
      end do
      !$omp end do
@@ -78,35 +83,30 @@ program main
      !$omp critical
      A = A + A_LOCAL
      !$omp end critical
-
-     !$omp end parallel 
+     !$omp end parallel
 
      V = V + 0.5d0 * dt * A
 
-     
+     !$omp parallel do reduction(+:Ekin) schedule(static)
+     do i = 1, Np
+        Ekin(t) = Ekin(t) + 0.5d0 * m * dot_product(V(:,i), V(:,i))
+     end do
+     !$omp end parallel do
 
      ! write
      if( mod(t, skip_frame) == 0 ) then
         write(fdX) X
-
-        ! compute energies
-        Ekin = 0.
-        do i=1,Np
-           Ekin = Ekin + 0.5*m*dot_product(V(:,i), V(:,i))
-        end do
-
-        Epot = 0.
-        do i=1,Np-1
-           do j=i+1,Np
-              Epot = Epot - compute_epot(X(:,i), X(:,j))
-           end do
-        end do
-        
-        write(fdE, '(F12.6, 2F16.8)') t*dt, Ekin, Epot
+        ! write(fdE, '(F12.6, 2F16.8)') t*dt, Ekin, Epot
      end if
   end do
 
   close(fdX)
+
+  print *, "Writing energies..."
+  ! might do something better
+  do t=1,Nt
+     write(fdE, '(F12.6, 2F16.8)') t*dt, Ekin(t), Epot(t)
+  end do
   close(fdE)
   
 end program main
