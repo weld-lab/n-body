@@ -7,12 +7,13 @@ program main
   !! V1 : Sequential code, basic stuff, energy, etc. Some opti like symmetri-
   !! zation. 
   !! V2 : OpenMP parallelisation
+  !! V3 : Can we ignore race condition?
 
   integer :: i, j, t
 
   real(real64), dimension(3, Np) :: X, V, A
-  real(real64), dimension(3, Np) :: A_LOCAL
   real(real64), dimension(3) :: F
+  real(real64) :: e_local
   real(real64), dimension(Nt) :: Ekin, Epot
   integer :: fdX, fdE, stat, omp_get_num_threads
   character(len=512) :: msg
@@ -66,37 +67,35 @@ program main
      X = X + dt * V
 
      A = 0.0
-     
-     !$omp parallel private(i,j,F, A_LOCAL) reduction(+:Epot)
-     A_LOCAL = 0.0d0
+     e_local = 0.0
+     !$omp parallel private(i,j,F) shared(A) reduction(+:e_local)
      !$omp do schedule(static)
      do i=1, Np-1
         do j = i+1, Np
            F = compute_force(X(:,i), X(:,j))
-           A_LOCAL(:,i) = A_LOCAL(:,i) + F/m
-           A_LOCAL(:,j) = A_LOCAL(:,j) - F/m
-           Epot(t) = Epot(t) - compute_epot(X(:,i), X(:,j))
+           A(:,i) = A(:,i) + F/m
+           A(:,j) = A(:,j) - F/m
+           e_local = e_local  - compute_epot(X(:,i), X(:,j))
         end do
      end do
      !$omp end do
-
-     !$omp critical
-     A = A + A_LOCAL
-     !$omp end critical
      !$omp end parallel
 
      V = V + 0.5d0 * dt * A
-
-     !$omp parallel do reduction(+:Ekin) schedule(static)
+     Epot(t) = e_local
+     
+     e_local = 0.0
+     !$omp parallel do reduction(+:e_local) schedule(static)
      do i = 1, Np
-        Ekin(t) = Ekin(t) + 0.5d0 * m * dot_product(V(:,i), V(:,i))
+        e_local = e_local + 0.5d0 * m * dot_product(V(:,i), V(:,i))
      end do
      !$omp end parallel do
+     Ekin(t) = e_local
 
      ! write
      if( mod(t, skip_frame) == 0 ) then
+        print *, t, "/", Nt
         write(fdX) X
-        ! write(fdE, '(F12.6, 2F16.8)') t*dt, Ekin, Epot
      end if
   end do
 
