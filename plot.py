@@ -116,5 +116,5 @@ def update(frame_idx):
     return scat,
 
 ani = FuncAnimation(fig, update, frames=n_frames, interval=10, blit=False)
-ani.save("nbody.mp4", writer="ffmpeg", fps=30)
-#plt.show()
+#ani.save("nbody.mp4", writer="ffmpeg", fps=30)
+plt.show()
