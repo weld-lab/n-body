@@ -1,0 +1,69 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+
+# utils
+cast_float = lambda x : float(x)
+data_load = lambda d : np.array(list(map(cast_float, d.split()))).reshape(8,2)
+
+def normalized_data_load(d):
+    data = data_load(d)
+    data[:,1] = data[:,1] / np.max(data[:,1])
+    return data
+    
+
+# data
+d8 = """
+1 1.104
+2 1.302
+3 1.622
+4 1.605
+5 1.892
+6 2.013
+7 2.152
+8 2.386
+"""
+n8 = normalized_data_load(d8)
+
+d80 = """
+1 1.794
+2 1.573
+3 1.284
+4 1.281
+5 1.462
+6 1.605
+7 1.708
+8 1.831
+"""
+n80 = normalized_data_load(d80)
+
+d800 = """
+1 24.954
+2 19.428
+3 15.266
+4 12.500
+5 11.410
+6 10.668
+7 10.568
+8 10.660
+"""
+n800 = normalized_data_load(d800)
+
+
+# plot
+plt.plot(n8[:,0], n8[:,1]*100,
+         lw=2, color="#2F6EBA",
+         marker="h", ms=6, label="Np = 8")
+plt.plot(n80[:,0], n80[:,1]*100,
+         lw=2, color="#B02418",
+         marker="^", ms=6, label="Np = 80")
+plt.plot(n800[:,0], n800[:,1]*100,
+         lw=2, color="#008A00",
+         marker="o", ms=6, label="Np = 800")
+plt.xlabel("Nb of threads")
+plt.ylabel("%time")
+plt.legend()
+plt.grid()
+plt.tight_layout()
+plt.savefig('overhead.png')
+#plt.show()
