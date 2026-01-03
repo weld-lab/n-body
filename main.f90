@@ -7,14 +7,14 @@ program main
   !! V1 : Sequential code, basic stuff, energy, etc. Some opti like symmetri-
   !! zation. 
   !! V2 : OpenMP parallelisation
-  !! V3 : Can we ignore race condition?
-
+  !! V3 : Can we ignore race condition? + passage sur la heap pour des temps longs
+  
   integer :: i, j, t
 
-  real(real64), dimension(3, Np) :: X, V, A
+  real(real64), dimension(3,Np) :: X, V, A
   real(real64), dimension(3) :: F
   real(real64) :: e_local
-  real(real64), dimension(Nt) :: Ekin, Epot
+  real(real64), allocatable :: Ekin(:), Epot(:)
   integer :: fdX, fdE, stat, omp_get_num_threads
   character(len=512) :: msg
 
@@ -43,6 +43,9 @@ program main
   !$omp end single
   !$omp end parallel
 
+  allocate(Ekin(Nt))
+  allocate(Epot(Nt))
+  
   Ekin = 0.0
   Epot = 0.0
 
