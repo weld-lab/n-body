@@ -1,0 +1,14 @@
+For every simulations,
+m = 1/Np
+Nt = 1e4
+Omega = 0.9 * sqrt(GmNp/R*R*R*)
+eps = 0.005
+
+Np vs time
+10 1.204
+342 8.721
+674 30.268
+1000 1:05.37
+1337 1:58.98
+1673 3:05.24
+2000 4:32.91
